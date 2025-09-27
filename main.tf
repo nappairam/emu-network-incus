@@ -19,9 +19,11 @@ resource "incus_network" "net_ovsbr0" {
   name = "net-ovsbr0"
   type = "bridge"
   config = {
-    "bridge.driver" = "openvswitch"
-    "ipv4.address"  = "10.80.22.1/24"
-    "ipv4.nat"      = "true"
+    "bridge.driver"   = "openvswitch"
+    "ipv4.address"    = "10.80.22.1/24"
+    "ipv4.nat"        = "true"
+    "ipv4.dhcp"       = "true"
+    "ipv4.dhcp.ranges" = "10.80.22.2-10.80.22.254"
   }
 }
 
@@ -30,11 +32,12 @@ resource "incus_profile" "prf_mgmt" {
   name = "prf-mgmt"
 
   device {
-    name = "eth0"
+    name = "mgmt0"
     type = "nic"
     properties = {
-      name    = "eth0"
-      network = incus_network.net_ovsbr0.name
+      name     = "mgmt0"
+      nictype  = "bridged"
+      parent   = incus_network.net_ovsbr0.name
     }
   }
 
@@ -100,6 +103,7 @@ resource "incus_instance" "core_router" {
   type  = "container"
 
   profiles = [
+    "default",
     incus_profile.prf_mgmt.name,
     incus_profile.prf_router_server.name,
     incus_profile.prf_router_remote.name,
@@ -113,6 +117,13 @@ resource "incus_instance" "core_router" {
   file {
     content             = file("${path.module}/configs/core-router/eth0.network")
     target_path         = "/etc/systemd/network/eth0.network"
+    mode                = "0644"
+    create_directories  = true
+  }
+
+  file {
+    content             = file("${path.module}/configs/core-router/mgmt0.network")
+    target_path         = "/etc/systemd/network/mgmt0.network"
     mode                = "0644"
     create_directories  = true
   }
@@ -154,8 +165,8 @@ resource "incus_instance" "server" {
   }
 
   file {
-    content             = file("${path.module}/configs/server/eth0.network")
-    target_path         = "/etc/systemd/network/eth0.network"
+    content             = file("${path.module}/configs/server/mgmt0.network")
+    target_path         = "/etc/systemd/network/mgmt0.network"
     mode                = "0644"
     create_directories  = true
   }
@@ -203,6 +214,7 @@ resource "incus_instance" "core_router_2" {
   type  = "container"
 
   profiles = [
+    "default",
     incus_profile.prf_mgmt.name,
     incus_profile.prf_router_router.name,
   ]
@@ -217,6 +229,21 @@ resource "incus_instance" "core_router_2" {
     mode                = "0644"
     create_directories  = true
   }
+
+  file {
+    content             = file("${path.module}/configs/core-router-2/mgmt0.network")
+    target_path         = "/etc/systemd/network/mgmt0.network"
+    mode                = "0644"
+    create_directories  = true
+  }
+
+  file {
+    content             = file("${path.module}/configs/core-router-2/eth4.network")
+    target_path         = "/etc/systemd/network/eth4.network"
+    mode                = "0644"
+    create_directories  = true
+  }
+
 }
 
 # Install iptables and configure NAT rule on core-router
@@ -231,7 +258,7 @@ resource "null_resource" "core_router_iptables" {
       ETH0_IP=$(incus exec core-router -- ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
       incus exec core-router -- iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $ETH0_IP
       # Add route for server loopback addresses
-      incus exec core-router -- ip route add 198.51.100.0/28 via 192.0.2.30
+      incus exec core-router -- ip route replace 198.51.100.0/28 via 192.0.2.30
     EOF
   }
 

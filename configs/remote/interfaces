@@ -1,6 +1,7 @@
-auto eth0
-iface eth0 inet dhcp
-hostname $(hostname)
+auto mgmt0
+iface mgmt0 inet static
+    address 10.80.22.30
+    netmask 255.255.255.0
 
 auto eth3
 iface eth3 inet static
