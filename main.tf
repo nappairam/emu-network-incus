@@ -206,6 +206,13 @@ resource "incus_instance" "remote" {
     mode                = "0644"
     create_directories  = true
   }
+
+  file {
+    content             = "nameserver 8.8.8.8\n"
+    target_path         = "/etc/resolv.conf"
+    mode                = "0644"
+    create_directories  = true
+  }
 }
 
 resource "incus_instance" "core_router_2" {
