@@ -1,0 +1,7 @@
+[Match]
+Name=lo
+
+[Network]
+Address=198.51.100.1/32
+Address=198.51.100.2/32
+Address=198.51.100.15/32

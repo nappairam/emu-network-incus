@@ -1,0 +1,16 @@
+# Example terraform.tfvars file
+# Copy this to terraform.tfvars and modify as needed
+
+# Network Configuration
+incusbr0_subnet = "10.42.163.1/24"
+ovs_bridge_subnet_ipv4 = "10.193.26.1/24"
+ovs_bridge_subnet_ipv6 = "fd42:780b:d07c:5d2e::1/64"
+
+# Container Images
+debian_image = "images:debian/trixie"
+alpine_image = "images:alpine/3.22"
+
+# VLAN Configuration
+server_vlan = "2"
+remote_vlan = "3"
+router_vlan = "4"
