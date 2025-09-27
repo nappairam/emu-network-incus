@@ -5,6 +5,10 @@ terraform {
       source  = "lxc/incus"
       version = "~> 0.1.0"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -201,5 +205,27 @@ resource "incus_instance" "core_router_2" {
     target_path         = "/etc/systemd/network/eth0.network"
     mode                = "0644"
     create_directories  = true
+  }
+}
+
+# Install iptables and configure NAT rule on core-router
+resource "null_resource" "core_router_iptables" {
+  depends_on = [incus_instance.core_router]
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      incus exec core-router -- apt-get update
+      incus exec core-router -- apt-get install -y iptables
+      # Get eth0 IP address and use it for SNAT
+      ETH0_IP=$(incus exec core-router -- ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+      incus exec core-router -- iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $ETH0_IP
+      # Add route for server loopback addresses
+      incus exec core-router -- ip route add 198.51.100.0/28 via 192.0.2.30
+    EOF
+  }
+
+  # Trigger re-run if the core-router IP changes
+  triggers = {
+    core_router_ip = incus_instance.core_router.ipv4_address
   }
 }
