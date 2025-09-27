@@ -15,28 +15,39 @@ terraform {
 provider "incus" {}
 
 # Networks
-resource "incus_network" "incusbr0" {
-  name = "incusbr0"
-  type = "bridge"
-  config = {
-    "ipv4.address" = "10.42.163.1/24"
-    "ipv4.nat"     = "true"
-  }
-}
-
 resource "incus_network" "net_ovsbr0" {
   name = "net-ovsbr0"
   type = "bridge"
   config = {
     "bridge.driver" = "openvswitch"
-    "ipv4.address"  = "10.193.26.1/24"
+    "ipv4.address"  = "10.80.22.1/24"
     "ipv4.nat"      = "true"
-    "ipv6.address"  = "fd42:780b:d07c:5d2e::1/64"
-    "ipv6.nat"      = "true"
   }
 }
 
 # Profiles
+resource "incus_profile" "prf_mgmt" {
+  name = "prf-mgmt"
+
+  device {
+    name = "eth0"
+    type = "nic"
+    properties = {
+      name    = "eth0"
+      network = incus_network.net_ovsbr0.name
+    }
+  }
+
+  device {
+    name = "root"
+    type = "disk"
+    properties = {
+      path = "/"
+      pool = "default"
+    }
+  }
+}
+
 resource "incus_profile" "prf_router_server" {
   name = "prf-router-server"
 
@@ -89,7 +100,7 @@ resource "incus_instance" "core_router" {
   type  = "container"
 
   profiles = [
-    "default",
+    incus_profile.prf_mgmt.name,
     incus_profile.prf_router_server.name,
     incus_profile.prf_router_remote.name,
     incus_profile.prf_router_router.name,
@@ -134,7 +145,7 @@ resource "incus_instance" "server" {
   type  = "container"
 
   profiles = [
-    "default",
+    incus_profile.prf_mgmt.name,
     incus_profile.prf_router_server.name,
   ]
 
@@ -170,7 +181,7 @@ resource "incus_instance" "remote" {
   type  = "container"
 
   profiles = [
-    "default",
+    incus_profile.prf_mgmt.name,
     incus_profile.prf_router_remote.name,
   ]
 
@@ -192,7 +203,7 @@ resource "incus_instance" "core_router_2" {
   type  = "container"
 
   profiles = [
-    "default",
+    incus_profile.prf_mgmt.name,
     incus_profile.prf_router_router.name,
   ]
 

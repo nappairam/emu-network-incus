@@ -33,7 +33,6 @@ output "core_router_2_ip_addresses" {
 output "network_info" {
   description = "Network configuration information"
   value = {
-    incusbr0_config    = incus_network.incusbr0.config
     net_ovsbr0_config  = incus_network.net_ovsbr0.config
   }
 }
