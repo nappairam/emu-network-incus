@@ -274,3 +274,23 @@ resource "null_resource" "core_router_iptables" {
     core_router_ip = incus_instance.core_router.ipv4_address
   }
 }
+
+# Install iptables and configure NAT rule on core-router-2
+resource "null_resource" "core_router_2_iptables" {
+  depends_on = [incus_instance.core_router_2]
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      incus exec core-router-2 -- apt-get update
+      incus exec core-router-2 -- apt-get install -y iptables
+      # Get eth0 IP address and use it for SNAT
+      ETH0_IP=$(incus exec core-router-2 -- ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+      incus exec core-router-2 -- iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $ETH0_IP
+    EOF
+  }
+
+  # Trigger re-run if the core-router-2 IP changes
+  triggers = {
+    core_router_2_ip = incus_instance.core_router_2.ipv4_address
+  }
+}
