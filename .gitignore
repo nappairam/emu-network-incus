@@ -6,3 +6,6 @@
 .terraform/
 .terraform.lock.hcl
 
+# Nix VM related
+*.qcow2
+result
