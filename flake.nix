@@ -51,6 +51,28 @@
                   extraGroups = [ "wheel" "incus-admin" ];
                   packages = with pkgs; [ git ];
                   initialPassword = "password";
+                  home = "/home/testuser";
+                };
+
+                # Copy terraform directory with proper ownership
+                systemd.tmpfiles.rules = [
+                  "d /home/testuser/terraform 0755 testuser users -"
+                ];
+
+                systemd.services.copy-terraform = {
+                  description = "Copy terraform files to user home";
+                  wantedBy = [ "multi-user.target" ];
+                  after = [ "local-fs.target" ];
+                  serviceConfig = {
+                    Type = "oneshot";
+                    User = "testuser";
+                    Group = "users";
+                  };
+                  script = ''
+                    mkdir -p /home/testuser/terraform
+                    cp -r ${toString ./terraform}/* /home/testuser/terraform/ 2>/dev/null || true
+                    chmod -R u+w /home/testuser/terraform
+                  '';
                 };
 
                 security.sudo.wheelNeedsPassword = false;
